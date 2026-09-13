@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  READER
+  CREATOR
+  ADMIN
+}
+
+enum StoryType {
+  NOVEL
+  COMIC
+}
+
+enum StoryStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum PurchaseStatus {
+  CREATED
+  PAID
+  FAILED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  displayName  String
+  role         Role       @default(READER)
+  createdAt    DateTime   @default(now())
+  stories      Story[]
+  purchases    Purchase[]
+}
+
+model Story {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  description String
+  coverUrl    String?
+  type        StoryType
+  pricePaise  Int          @default(0)
+  status      StoryStatus  @default(DRAFT)
+  creatorId   String
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  chapters    Chapter[]
+  purchases   Purchase[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Chapter {
+  id         String   @id @default(cuid())
+  storyId    String
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  number     Int
+  title      String
+  content    String
+  isFree     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  @@unique([storyId, number])
+}
+
+model Purchase {
+  id                 String         @id @default(cuid())
+  userId             String
+  storyId            String
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story              Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  amountPaise        Int
+  razorpayOrderId    String?        @unique
+  razorpayPaymentId  String?        @unique
+  status             PurchaseStatus @default(CREATED)
+  createdAt          DateTime       @default(now())
+  @@unique([userId, storyId])
+}
